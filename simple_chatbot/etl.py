@@ -7,16 +7,25 @@ import os
 import re
 from typing import Dict
 
+from langchain_core.embeddings.embeddings import Embeddings
 from pypdf import PdfReader
+import numpy as np
 
 
 class Extractor:
-    def parse(
+    """
+    PDF -> Normalized Text로 변환
+    """
+
+    def extract(
         self,
         pdf_path: str = "./resources/references/book.pdf",
         raw_dest_path: str = "./resources/references/book.json",
         dest_path: str = "./resources/references/normalized_book.json",
-    ):
+    ) -> Dict[int, str]:
+        """
+        @return {page_index: page_content}
+        """
         if not pdf_path or not raw_dest_path or not dest_path:
             raise RuntimeError(f"pdf_path: {pdf_path}, raw_dest_path: {raw_dest_path}, dest_path: {dest_path}")
         self.__parse_pdf_to_json(pdf_path=pdf_path, dest_path=raw_dest_path)
@@ -55,4 +64,28 @@ class Extractor:
             os.makedirs(dest_path[: dest_path.rfind("/")], exist_ok=True)
             with open(dest_path, "w") as fd:
                 json.dump(result, fd, ensure_ascii=False)
+        return result
+
+
+class Transformer:
+    """
+    Normalized Text -> Embedding으로 변환
+    Ollama를 사용하는 경우, 다음 조건을 만족해야 한다.
+    1. ollama가 local에서 serving 됨
+    2. ollama model이 pull 되어 있음
+    """
+
+    __embeddings: Embeddings
+
+    def __init__(self, embeddings: Embeddings):
+        self.__embeddings = embeddings
+
+    def transform(self, data: Dict[int, str]) -> np.ndarray:
+        """
+        @param data: {page_index: page_content}
+        @return [embedding, ...] (order by page_index)
+        """
+        text_data = [v for _, v in sorted(data.items(), key=lambda x: x[0])]
+        embedded_data = self.__embeddings.embed_documents(texts=text_data)
+        result = np.array(embedded_data)
         return result
