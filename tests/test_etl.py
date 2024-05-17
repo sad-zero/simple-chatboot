@@ -1,5 +1,7 @@
+from copy import deepcopy
 import json
 import os
+from typing import Dict
 
 from langchain_community.embeddings.ollama import OllamaEmbeddings
 import numpy as np
@@ -38,12 +40,16 @@ def embeddings():
     yield result
 
 
-def test_should_convert_text_to_ndarray(normalized_data, embeddings):
+def test_should_convert_text_to_embedding(normalized_data, embeddings):
     # given
     transformer = Transformer(embeddings=embeddings)
-    expected = np.array(embeddings.embed_documents([v for _, v in sorted(normalized_data.items(), key=lambda x: x[0])]))
+    expected = {}
+    sorted_documents = [v for _, v in sorted(normalized_data.items(), key=lambda x: x[0])]
+    embeddeds = embeddings.embed_documents(sorted_documents)
+    for idx, (document, embedding) in enumerate(zip(sorted_documents, embeddeds)):
+        expected[idx] = {"document": document, "embedding": embedding}
     # when
-    actual = transformer.transform(normalized_data)
+    actual: Dict[int, dict] = transformer.transform(normalized_data)
     # then
-    breakpoint()
-    assert np.array_equal(actual, expected)
+    for k in actual.keys():
+        assert np.array_equal(actual[k]["embedding"], expected[k]["embedding"])

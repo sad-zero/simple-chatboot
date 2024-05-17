@@ -5,8 +5,9 @@ PDF -> Vector Store ETL Pipeline
 import json
 import os
 import re
-from typing import Dict
+from typing import Dict, List
 
+from chromadb import Client, Collection
 from langchain_core.embeddings.embeddings import Embeddings
 from pypdf import PdfReader
 import numpy as np
@@ -80,12 +81,32 @@ class Transformer:
     def __init__(self, embeddings: Embeddings):
         self.__embeddings = embeddings
 
-    def transform(self, data: Dict[int, str]) -> np.ndarray:
+    def transform(self, data: Dict[int, str]) -> Dict[int, dict]:
         """
         @param data: {page_index: page_content}
         @return [embedding, ...] (order by page_index)
         """
         text_data = [v for _, v in sorted(data.items(), key=lambda x: x[0])]
-        embedded_data = self.__embeddings.embed_documents(texts=text_data)
-        result = np.array(embedded_data)
+        embedded = self.__embeddings.embed_documents(texts=text_data)
+        result = {}
+        for idx, (document, embedding) in enumerate(zip(text_data, embedded)):
+            result[idx] = {"document": document, "embedding": embedding}
         return result
+
+
+class Loader:
+    """
+    Embedding -> Chroma DB 저장
+    """
+
+    __collection: Collection
+
+    def __init__(self, collection: Collection):
+        self.__collection = collection
+
+    def load(self, data: List[List[float]], force: bool = True):
+        """
+        @param force: 이전 내용을 지우고 다시 만든다.
+        """
+        if force:
+            self.__collection.delete(where={"tag": "simple_chatbot"})
