@@ -7,6 +7,7 @@ from langchain_community.embeddings.ollama import OllamaEmbeddings
 import numpy as np
 import pytest
 from simple_chatbot.etl import Extractor, Transformer
+from simple_chatbot.vo import DocumentPair
 
 
 def test_should_extract_pdf_to_normalized_json():
@@ -47,9 +48,9 @@ def test_should_convert_text_to_embedding(normalized_data, embeddings):
     sorted_documents = [v for _, v in sorted(normalized_data.items(), key=lambda x: x[0])]
     embeddeds = embeddings.embed_documents(sorted_documents)
     for idx, (document, embedding) in enumerate(zip(sorted_documents, embeddeds)):
-        expected[idx] = {"document": document, "embedding": embedding}
+        expected[idx] = DocumentPair(document=document, embedding=embedding)
     # when
     actual: Dict[int, dict] = transformer.transform(normalized_data)
     # then
     for k in actual.keys():
-        assert np.array_equal(actual[k]["embedding"], expected[k]["embedding"])
+        assert np.array_equal(actual[k].embedding, expected[k].embedding)

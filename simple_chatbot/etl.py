@@ -5,12 +5,14 @@ PDF -> Vector Store ETL Pipeline
 import json
 import os
 import re
-from typing import Dict, List
+from typing import Dict
 
 from chromadb import Client, Collection
 from langchain_core.embeddings.embeddings import Embeddings
 from pypdf import PdfReader
 import numpy as np
+
+from simple_chatbot.vo import DocumentPair
 
 
 class Extractor:
@@ -81,7 +83,7 @@ class Transformer:
     def __init__(self, embeddings: Embeddings):
         self.__embeddings = embeddings
 
-    def transform(self, data: Dict[int, str]) -> Dict[int, dict]:
+    def transform(self, data: Dict[int, str]) -> Dict[int, DocumentPair]:
         """
         @param data: {page_index: page_content}
         @return [embedding, ...] (order by page_index)
@@ -90,7 +92,7 @@ class Transformer:
         embedded = self.__embeddings.embed_documents(texts=text_data)
         result = {}
         for idx, (document, embedding) in enumerate(zip(text_data, embedded)):
-            result[idx] = {"document": document, "embedding": embedding}
+            result[idx] = DocumentPair(document=document, embedding=embedding)
         return result
 
 
@@ -104,7 +106,7 @@ class Loader:
     def __init__(self, collection: Collection):
         self.__collection = collection
 
-    def load(self, data: List[List[float]], force: bool = True):
+    def load(self, data: Dict[int, dict], force: bool = True):
         """
         @param force: 이전 내용을 지우고 다시 만든다.
         """
