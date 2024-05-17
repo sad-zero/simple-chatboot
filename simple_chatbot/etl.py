@@ -106,9 +106,14 @@ class Loader:
     def __init__(self, collection: Collection):
         self.__collection = collection
 
-    def load(self, data: Dict[int, dict], force: bool = True):
+    def load(self, data: Dict[int, DocumentPair], force: bool = True):
         """
         @param force: 이전 내용을 지우고 다시 만든다.
         """
         if force:
             self.__collection.delete(where={"tag": "simple_chatbot"})
+        for idx, document_pair in data.items():
+            self.__collection.add(
+                ids=[str(idx)], embeddings=[document_pair.embedding], documents=[document_pair.document]
+            )
+        return
