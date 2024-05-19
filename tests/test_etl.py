@@ -1,6 +1,6 @@
 import json
 import os
-from typing import Dict
+from typing import Dict, List
 
 from chromadb import PersistentClient
 from chromadb.config import Settings
@@ -10,10 +10,15 @@ from simple_chatbot.etl import Extractor, Loader, Transformer
 from simple_chatbot.vo import DocumentPair
 
 
-def test_should_extract_pdf_to_documents():
+@pytest.fixture(scope="module")
+def src_path():
+    yield "resources/references/book.pdf"
+
+
+def test_should_extract_pdf_to_documents(src_path):
     # given
-    src_path = "resources/references/book.pdf"
     extractor = Extractor()
+
     # when
     result = extractor.extract(pdf_path=src_path)
 
@@ -22,10 +27,9 @@ def test_should_extract_pdf_to_documents():
 
 
 @pytest.fixture(scope="function")
-def normalized_data():
-    with open("resources/tests/references/normalized_book.json", "r") as fd:
-        data = json.load(fd)
-        yield data
+def pages(src_path):
+    extractor = Extractor()
+    yield extractor.extract(src_path)
 
 
 @pytest.fixture(scope="function")
@@ -34,13 +38,13 @@ def embeddings():
     yield result
 
 
-def test_should_convert_text_to_embedding(normalized_data, embeddings):
+def test_should_convert_page_to_chunk(pages):
     # given
-    transformer = Transformer(embeddings=embeddings)
+    transformer = Transformer()
     # when
-    actual: Dict[int, DocumentPair] = transformer.transform(normalized_data)
+    actual = transformer.transform(pages)
     # then
-    assert actual
+    assert len(actual) > len(pages)
 
 
 @pytest.fixture(scope="function")
@@ -50,9 +54,9 @@ def collection():
 
 
 @pytest.fixture(scope="function")
-def transformed_data(normalized_data, embeddings):
+def transformed_data(pages, embeddings):
     transformer = Transformer(embeddings=embeddings)
-    result = transformer.transform(normalized_data)
+    result = transformer.transform(pages)
     return result
 
 

@@ -13,14 +13,12 @@ from chromadb import Collection
 from langchain_core.embeddings.embeddings import Embeddings
 from langchain_core.documents.base import Document
 from langchain_community.document_loaders import PyPDFLoader
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 from simple_chatbot.vo import DocumentPair
 
 
 class Extractor:
-    """
-    PDF -> Normalized Text로 변환
-    """
 
     def extract(
         self,
@@ -33,64 +31,43 @@ class Extractor:
         pages = loader.load_and_split()
         return pages
 
-    def __normalize_book(
-        self,
-        src_path: str,
-        dest_path: str,
-    ) -> Dict[int, str]:
-        stop_patterns = re.compile(r"(﻿|https://www.youtube.com/@jachinam)|\u200b")
-
-        with open(src_path, "r") as fd:
-            book = json.load(fd)
-
-        result = {}
-        for page, content in book.items():
-            normalized_content = stop_patterns.sub("", content)
-            result[page] = normalized_content
-        if dest_path:
-            os.makedirs(dest_path[: dest_path.rfind("/")], exist_ok=True)
-            with open(dest_path, "w") as fd:
-                json.dump(result, fd, ensure_ascii=False)
-                print(f"Extractor: Dump to {dest_path}")
-        return result
-
 
 class Transformer:
     """
-    Normalized Text -> Embedding으로 변환
-    Ollama를 사용하는 경우, 다음 조건을 만족해야 한다.
-    1. ollama가 local에서 serving 됨
-    2. ollama model이 pull 되어 있음
+    List[Document] -> Chunks
     """
 
-    __embeddings: Embeddings
+    __text_splitter: RecursiveCharacterTextSplitter
 
-    def __init__(self, embeddings: Embeddings):
-        self.__embeddings = embeddings
+    def __init__(self):
+        self.__text_splitter = RecursiveCharacterTextSplitter(
+            separators=[
+                "\n\n",
+                "\n",
+                " ",
+                ".",
+                ",",
+                "\u200b",  # Zero-width space
+                "\uff0c",  # Fullwidth comma
+                "\u3001",  # Ideographic comma
+                "\uff0e",  # Fullwidth full stop
+                "\u3002",  # Ideographic full stop
+                "",
+            ],
+            chunk_size=100,
+            chunk_overlap=20,
+            length_function=len,
+            is_separator_regex=False,
+        )
 
-    def transform(
-        self, data: Dict[int, str], dest_path: str = "resources/references/transformed_data.json"
-    ) -> Dict[int, DocumentPair]:
+    def transform(self, data: List[Document]) -> List[Document]:
         """
-        @param data: {page_index: page_content}
-        @return [embedding, ...] (order by page_index)
+        @param data: Paged Documents
+        @return Chunked Documents
         """
-        text_data = [v for _, v in sorted(data.items(), key=lambda x: x[0])]
-        embedded = asyncio.run(self.__aembed_documents(text_data))
-        result = {}
-        for idx, (document, embedding) in enumerate(zip(text_data, embedded)):
-            result[idx] = DocumentPair(document=document, embedding=embedding)
-        if dest_path:
-            with open(dest_path, "w") as fd:
-                json.dump({key: asdict(val) for key, val in result.items()}, fd, ensure_ascii=False)
-                print(f"Transformer: Dump to {dest_path}")
-        return result
-
-    async def __aembed_documents(self, text_data):
-        coros = []
-        for doc in text_data:
-            coros.append(self.__embeddings.aembed_query(doc))
-        result = await asyncio.gather(*coros)
+        str_documents: List[str] = list(map(lambda x: x.page_content, data))
+        metadatas = list(map(lambda x: x.metadata, data))
+        result = self.__text_splitter.create_documents(str_documents, metadatas=metadatas)
         return result
 
 
