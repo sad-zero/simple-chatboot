@@ -38,7 +38,7 @@ def normalized_data():
 
 @pytest.fixture(scope="function")
 def embeddings():
-    result = OllamaEmbeddings(model="llama3")
+    result = OllamaEmbeddings(model="mxbai-embed-large")
     yield result
 
 
