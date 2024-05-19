@@ -1,11 +1,10 @@
-from copy import deepcopy
 import json
 import os
 from typing import Dict
 
-import chromadb
+from chromadb import PersistentClient
+from chromadb.config import Settings
 from langchain_community.embeddings.ollama import OllamaEmbeddings
-import numpy as np
 import pytest
 from simple_chatbot.etl import Extractor, Loader, Transformer
 from simple_chatbot.vo import DocumentPair
@@ -53,7 +52,7 @@ def test_should_convert_text_to_embedding(normalized_data, embeddings):
 
 @pytest.fixture(scope="function")
 def collection():
-    client = chromadb.PersistentClient(path="./resources/tests/vector_store.chroma")
+    client = PersistentClient(path="./resources/vector_store.chroma", settings=Settings(anonymized_telemetry=False))
     return client.get_or_create_collection("books")
 
 

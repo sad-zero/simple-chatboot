@@ -1,16 +1,18 @@
 from pprint import pprint
 import pytest
-import chromadb
 from langchain_community.embeddings.ollama import OllamaEmbeddings
 from langchain_community.llms.ollama import Ollama
 from langchain_community.chat_models.ollama import ChatOllama
 
-from simple_chatbot.chatbot import Chatbot
+from chromadb import PersistentClient
+from chromadb.config import Settings
+
+from simple_chatbot.chatbot import _CustomRetriever, Chatbot
 
 
 @pytest.fixture(scope="module")
 def db():
-    client = chromadb.PersistentClient("./resources/tests/vector_store.chroma")
+    client = PersistentClient(path="./resources/vector_store.chroma", settings=Settings(anonymized_telemetry=False))
     yield client.get_collection("books")
 
 
@@ -43,3 +45,20 @@ def test_should_answer_when_query(chatbot):
     actual = chatbot.query(query=prompt)
     # then
     assert actual
+
+
+def test_should_retreive_related():
+    # given
+    from langchain_community.embeddings.ollama import OllamaEmbeddings
+    from chromadb import PersistentClient
+    from chromadb.config import Settings
+
+    embeddings = OllamaEmbeddings(model="all-minilm")
+    client = PersistentClient(path="./resources/vector_store.chroma", settings=Settings(anonymized_telemetry=False))
+    collection = client.get_collection("books")
+
+    retreiver = _CustomRetriever(embeddings=embeddings, db=collection, top_k=7)
+    # when
+    related = retreiver.invoke("자취 관련 정보 알려줘")
+    # then
+    assert len(related) == 7

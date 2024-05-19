@@ -11,7 +11,7 @@ from langchain_core.language_models.llms import BaseLLM
 from langchain_core.messages import BaseMessage, SystemMessage, HumanMessage, AIMessage
 from langchain_core.prompts import ChatPromptTemplate, HumanMessagePromptTemplate
 from langchain_core.output_parsers import StrOutputParser
-from langchain_core.runnables import Runnable
+from langchain_core.runnables import Runnable, RunnablePassthrough
 
 
 class _Memory:
@@ -47,19 +47,40 @@ class _Memory:
         self.__core_db.clear()
 
 
+from langchain_core.callbacks import CallbackManagerForRetrieverRun
+from langchain_core.documents import Document
+from langchain_core.retrievers import BaseRetriever
+
+
+class _CustomRetriever(BaseRetriever):
+    """
+    BaseRetriever에서 subclass에 대한 속성 초기화를 담당한다. 따라서 초기화 메서드를 작성하면 안되고, public으로 properties를 선언해야 한다.
+    """
+
+    embeddings: Embeddings
+    db: Collection
+    top_k: int
+
+    def _get_relevant_documents(self, query: str, *, run_manager: CallbackManagerForRetrieverRun) -> List[Document]:
+        embedded_prompt = self.embeddings.embed_query(query)
+        result = self.db.query(query_embeddings=[embedded_prompt], n_results=self.top_k)
+        top_k_documents: List[str] = [" ".join(d) for d in result["documents"]]
+        result: List[Document] = []
+        for content in top_k_documents:
+            document = Document(page_content=content)
+            result.append(document)
+        return result
+
+
 class Chatbot:
     __model: BaseLLM
-    __embeddings: Embeddings
-    __db: Collection
-    __top_k: int
+    __retreiver: BaseRetriever
     __memory: _Memory
     __rag_template = HumanMessagePromptTemplate.from_template(template="[Data]\n{data}\n[Question]\n{query}")
 
     def __init__(self, model: BaseLLM, embeddings: Embeddings, db: Collection, top_k: int = 5, memory_size: int = 20):
         self.__model = model
-        self.__embeddings = embeddings
-        self.__db = db
-        self.__top_k = top_k
+        self.__retreiver = _CustomRetriever(embeddings=embeddings, db=db, top_k=top_k)
         self.__memory = _Memory(limit=memory_size)
 
     def add_rule(self, rule: str):
@@ -69,16 +90,15 @@ class Chatbot:
         """
         Memory 필요
         """
-        related_query: str = self.__retreive_top_k(query)
         core_messages = self.__memory.get_core()
         chat_messages = self.__memory.get_chat()
         messages = core_messages + chat_messages + [self.__rag_template]
         prompt = ChatPromptTemplate.from_messages(messages=messages)
-        chain: Runnable = prompt | self.__model | StrOutputParser()
 
-        result = chain.invoke({"data": related_query, "query": query})
+        chain: Runnable = self.__get_chain(prompt=prompt)
+        result = chain.invoke(query)
 
-        query = self.__rag_template.format(data=related_query, query=query)
+        query = self.__rag_template.format(data=self.__retreiver.invoke(query), query=query)
         self.__memory.append_chat_message(query)
         self.__memory.append_chat_message(AIMessage(content=result))
 
@@ -91,22 +111,24 @@ class Chatbot:
         """
         단발성 질문
         """
-        related_query: str = self.__retreive_top_k(query)
         prompt = ChatPromptTemplate.from_messages(self.__memory.get_core() + [self.__rag_template])
 
-        chain: Runnable = prompt | self.__model | StrOutputParser()
-        result = chain.invoke({"data": related_query, "query": query})
+        chain: Runnable = self.__get_chain(prompt=prompt)
+        result = chain.invoke(query)
 
-        query = prompt.format(data=related_query, query=query)
+        query = prompt.format(data=self.__retreiver.invoke(query), query=query)
         logging.debug(f"prompt: {query}\nanswer: {result}")
 
         return result
 
-    def __retreive_top_k(self, prompt: str) -> str:
-        embedded_prompt = self.__embeddings.embed_query(prompt)
-        result = self.__db.query(query_embeddings=[embedded_prompt], n_results=self.__top_k)
-        top_k_documents = [" ".join(d) for d in result["documents"]]
-        result = ""
-        for idx, doc in enumerate(top_k_documents):
-            result += f"{idx}: {doc}"
-        return result
+    def __get_chain(self, prompt: ChatPromptTemplate) -> Runnable:
+        def format_docs(documents: List[Document]):
+            return "\n\n".join(map(lambda x: x.page_content, documents))
+
+        chain: Runnable = (
+            {"data": self.__retreiver | format_docs, "query": RunnablePassthrough()}
+            | prompt
+            | self.__model
+            | StrOutputParser()
+        )
+        return chain
