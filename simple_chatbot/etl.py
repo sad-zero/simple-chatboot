@@ -7,11 +7,12 @@ from dataclasses import asdict
 import json
 import os
 import re
-from typing import Dict
+from typing import Dict, List
 
 from chromadb import Collection
 from langchain_core.embeddings.embeddings import Embeddings
-from pypdf import PdfReader
+from langchain_core.documents.base import Document
+from langchain_community.document_loaders import PyPDFLoader
 
 from simple_chatbot.vo import DocumentPair
 
@@ -24,31 +25,13 @@ class Extractor:
     def extract(
         self,
         pdf_path: str = "./resources/references/book.pdf",
-        raw_dest_path: str = "./resources/references/book.json",
-        dest_path: str = "./resources/references/normalized_book.json",
-    ) -> Dict[int, str]:
+    ) -> List[Document]:
         """
         @return {page_index: page_content}
         """
-        if not pdf_path or not raw_dest_path or not dest_path:
-            raise RuntimeError(f"pdf_path: {pdf_path}, raw_dest_path: {raw_dest_path}, dest_path: {dest_path}")
-        self.__parse_pdf_to_json(pdf_path=pdf_path, dest_path=raw_dest_path)
-        result = self.__normalize_book(src_path=raw_dest_path, dest_path=dest_path)
-        return result
-
-    def __parse_pdf_to_json(self, pdf_path: str, dest_path: str) -> Dict[int, str]:
-        pdf_reader = PdfReader(pdf_path)
-        text_book = {}
-        for idx, page in enumerate(pdf_reader.pages):
-            text_page = page.extract_text()
-            text_book[idx] = text_page
-
-        if dest_path:
-            os.makedirs(dest_path[: dest_path.rfind("/")], exist_ok=True)
-            with open(dest_path, "w") as fd:
-                json.dump(text_book, fd, ensure_ascii=False)
-
-        return text_book
+        loader = PyPDFLoader(pdf_path)
+        pages = loader.load_and_split()
+        return pages
 
     def __normalize_book(
         self,
