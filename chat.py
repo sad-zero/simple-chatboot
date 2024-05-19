@@ -1,9 +1,12 @@
+"""
+Chatbot
+"""
+
 import logging
 
 from chromadb import PersistentClient
 from chromadb.config import Settings
 from simple_chatbot.chatbot import Chatbot
-from simple_chatbot.etl import Extractor, Loader, Transformer
 from langchain_community.embeddings.ollama import OllamaEmbeddings
 from langchain_community.chat_models.ollama import ChatOllama
 
@@ -24,15 +27,3 @@ if __name__ == "__main__":
         query = input("Query: ")
         answer = chatbot.chat(query)
         print(f"Answer: {answer}")
-
-    # extractor = Extractor()
-    # transformer = Transformer(embeddings=embeddings)
-    # loader = Loader(collection=collection)
-
-    # print("===Extractor===")
-    # data = extractor.extract()
-    # print("===Transform==")
-    # data = transformer.transform(data)
-    # print("===Loader==")
-    # loader.load(data)
-    pass
