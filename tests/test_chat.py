@@ -2,7 +2,8 @@ from pprint import pprint
 import pytest
 import chromadb
 from langchain_community.embeddings.ollama import OllamaEmbeddings
-from langchain_community.llms import Ollama
+from langchain_community.llms.ollama import Ollama
+from langchain_community.chat_models.ollama import ChatOllama
 
 from simple_chatbot.chatbot import Chatbot
 
@@ -21,7 +22,7 @@ def embeddings():
 
 @pytest.fixture(scope="module")
 def model():
-    result = Ollama(model="llama3")
+    result = ChatOllama(model="phi3")
     yield result
 
 
