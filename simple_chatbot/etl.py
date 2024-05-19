@@ -55,7 +55,7 @@ class Extractor:
         src_path: str,
         dest_path: str,
     ) -> Dict[int, str]:
-        stop_patterns = re.compile(r"(﻿|https://www.youtube.com/@jachinam)")
+        stop_patterns = re.compile(r"(﻿|https://www.youtube.com/@jachinam)|\u200b")
 
         with open(src_path, "r") as fd:
             book = json.load(fd)

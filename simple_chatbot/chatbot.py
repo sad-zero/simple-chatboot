@@ -53,9 +53,7 @@ class Chatbot:
     __db: Collection
     __top_k: int
     __memory: _Memory
-    __rag_template = HumanMessagePromptTemplate.from_template(
-        template="Using this data: {data}. Response to this question: {query}"
-    )
+    __rag_template = HumanMessagePromptTemplate.from_template(template="[Data]\n{data}\n[Question]\n{query}")
 
     def __init__(self, model: BaseLLM, embeddings: Embeddings, db: Collection, top_k: int = 5, memory_size: int = 20):
         self.__model = model
@@ -71,7 +69,7 @@ class Chatbot:
         """
         Memory 필요
         """
-        related_query: List[str] = self.__retreive_top_k(query)
+        related_query: str = self.__retreive_top_k(query)
         core_messages = self.__memory.get_core()
         chat_messages = self.__memory.get_chat()
         messages = core_messages + chat_messages + [self.__rag_template]
@@ -93,7 +91,7 @@ class Chatbot:
         """
         단발성 질문
         """
-        related_query: List[str] = self.__retreive_top_k(query)
+        related_query: str = self.__retreive_top_k(query)
         prompt = ChatPromptTemplate.from_messages(self.__memory.get_core() + [self.__rag_template])
 
         chain: Runnable = prompt | self.__model | StrOutputParser()
@@ -104,8 +102,11 @@ class Chatbot:
 
         return result
 
-    def __retreive_top_k(self, prompt: str) -> List[str]:
+    def __retreive_top_k(self, prompt: str) -> str:
         embedded_prompt = self.__embeddings.embed_query(prompt)
         result = self.__db.query(query_embeddings=[embedded_prompt], n_results=self.__top_k)
         top_k_documents = [" ".join(d) for d in result["documents"]]
-        return top_k_documents
+        result = ""
+        for idx, doc in enumerate(top_k_documents):
+            result += f"{idx}: {doc}"
+        return result
