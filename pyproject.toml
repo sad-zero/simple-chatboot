@@ -17,6 +17,13 @@ dev = [
     "pytest"
 ]
 
+[tool.pytest.ini_options]
+log_level="DEBUG"
+log_cli=true
+log_cli_level="DEBUG"
+testpaths = ["tests"]
+
+
 [tool.black]
 line-length=120
 target-version=["py310"]

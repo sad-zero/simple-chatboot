@@ -1,25 +1,38 @@
-from pprint import pprint
+import logging
+
+from chromadb import PersistentClient
+from chromadb.config import Settings
+from simple_chatbot.chatbot import Chatbot
+from simple_chatbot.etl import Extractor, Loader, Transformer
 from langchain_community.embeddings.ollama import OllamaEmbeddings
-import chromadb
+from langchain_community.chat_models.ollama import ChatOllama
+
+logging.basicConfig(level=logging.DEBUG)
 
 if __name__ == "__main__":
-    embeddings = OllamaEmbeddings(model="llama3")
-    documents = [
-        "이 글은 라면에 대한 내용입니다.",
-        "이 글은 짜장면에 대한 내용입니다.",
-        "이 글은 햄버거에 대한 내용입니다.",
-    ]
-    client = chromadb.PersistentClient("./resources/vector_store.chroma")
-    collection = client.get_or_create_collection(name="docs")
-    collection.update()
+    embeddings = OllamaEmbeddings(model="all-minilm")
+    client = PersistentClient(path="./resources/vector_store.chroma", settings=Settings(anonymized_telemetry=False))
+    collection = client.get_collection("books")
+    model = ChatOllama(model="phi3")
 
-    # embedded_documents = embeddings.embed_documents(documents)
+    chatbot = Chatbot(embeddings=embeddings, db=collection, model=model)
+    chatbot.add_rule("You should find reasons of your answer in the given data")
+    chatbot.add_rule("You should answer with reasons")
+    chatbot.add_rule('You should answer only "모르겠습니다" if you can\'t find the reasons in the given data')
+    chatbot.add_rule("You should answer in korean")
+    while True:
+        query = input("Query: ")
+        answer = chatbot.chat(query)
+        print(f"Answer: {answer}")
 
-    # collection.add(
-    #     ids=[str(i) for i in range(len(embedded_documents))], embeddings=embedded_documents, documents=documents
-    # )
+    # extractor = Extractor()
+    # transformer = Transformer(embeddings=embeddings)
+    # loader = Loader(collection=collection)
 
-    prompt = "라면?"
-    embedded_prompt = embeddings.embed_query(prompt)
-    result = collection.query(query_embeddings=[embedded_prompt], n_results=1)
-    pprint(result)
+    # print("===Extractor===")
+    # data = extractor.extract()
+    # print("===Transform==")
+    # data = transformer.transform(data)
+    # print("===Loader==")
+    # loader.load(data)
+    pass
