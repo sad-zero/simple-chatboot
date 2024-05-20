@@ -3,15 +3,45 @@ ETL Pipeline
 """
 
 # TODO: ETL Pipeline 완성
-if __name__ == "__main__":
-    # extractor = Extractor()
-    # transformer = Transformer(embeddings=embeddings)
-    # loader = Loader(collection=collection)
+import logging
+from chromadb import PersistentClient
+from chromadb.config import Settings
+from langchain_chroma import Chroma
+from simple_chatbot.etl import Extractor, Loader, Transformer
+from langchain.storage import InMemoryByteStore
+from langchain.embeddings import CacheBackedEmbeddings
+from langchain_community.embeddings.ollama import OllamaEmbeddings
 
-    # print("===Extractor===")
-    # data = extractor.extract()
-    # print("===Transform==")
-    # data = transformer.transform(data)
-    # print("===Loader==")
-    # loader.load(data)
-    pass
+
+def get_vector_store(
+    coll_name: str = "books", persistent_path: str = "/Users/dev/Documents/simple-chatboot/resources/chroma_db"
+) -> Chroma:
+    embeddings = OllamaEmbeddings(model="all-minilm")
+    store = InMemoryByteStore()
+    embeddings_func = CacheBackedEmbeddings.from_bytes_store(
+        underlying_embeddings=embeddings, document_embedding_cache=store, namespace="in-memory-chat"
+    )
+    client = PersistentClient(path=persistent_path, settings=Settings(anonymized_telemetry=False))
+    result = Chroma(
+        collection_name=coll_name,
+        embedding_function=embeddings_func,
+        client=client,
+        create_collection_if_not_exists=True,
+    )
+    return result
+
+
+logging.basicConfig(level=logging.DEBUG)
+
+if __name__ == "__main__":
+    extractor = Extractor()
+    transformer = Transformer()
+    loader = Loader(vector_store=get_vector_store())
+
+    logging.info("Phase1: extract from pdf")
+    data = extractor.extract()
+    logging.info("Phase2: transform documents")
+    data = transformer.transform(data)
+    logging.info("Phase3: load to vector store")
+    loader.load(data)
+    logging.info("Done")

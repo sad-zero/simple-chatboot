@@ -1,7 +1,3 @@
-import json
-import os
-from typing import Dict, List
-
 from chromadb import PersistentClient
 from chromadb.config import Settings
 from langchain_chroma import Chroma
@@ -10,7 +6,6 @@ from langchain.embeddings import CacheBackedEmbeddings
 from langchain.storage import InMemoryByteStore
 import pytest
 from simple_chatbot.etl import Extractor, Loader, Transformer
-from simple_chatbot.vo import DocumentPair
 
 
 @pytest.fixture(scope="module")

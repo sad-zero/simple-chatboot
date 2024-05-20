@@ -2,26 +2,12 @@
 PDF -> Vector Store ETL Pipeline
 """
 
-import asyncio
-from dataclasses import asdict
-import json
-import logging
-import os
-import re
-from typing import Dict, List
+from typing import List
 
-from chromadb import Collection, GetResult
-from langchain.embeddings import CacheBackedEmbeddings
-from langchain_core.embeddings.embeddings import Embeddings
 from langchain_core.documents.base import Document
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain.storage import InMemoryByteStore
 from langchain_chroma import Chroma
-from langchain_core.vectorstores import VectorStore
-from chromadb.config import Settings
-
-from simple_chatbot.vo import DocumentPair
 
 
 class Extractor:
