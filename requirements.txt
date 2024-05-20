@@ -2,3 +2,4 @@ pypdf
 chromadb
 langchain
 langchain-chroma
+langchain-community

@@ -14,7 +14,7 @@ logging.basicConfig(level=logging.DEBUG)
 
 if __name__ == "__main__":
     embeddings = OllamaEmbeddings(model="all-minilm")
-    client = PersistentClient(path="./resources/vector_store.chroma", settings=Settings(anonymized_telemetry=False))
+    client = PersistentClient(path="resources/chroma_db", settings=Settings(anonymized_telemetry=False))
     collection = client.get_collection("books")
     model = ChatOllama(model="phi3")
 

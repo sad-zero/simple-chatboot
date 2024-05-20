@@ -2,7 +2,6 @@
 ETL Pipeline
 """
 
-# TODO: ETL Pipeline 완성
 import logging
 from chromadb import PersistentClient
 from chromadb.config import Settings
@@ -13,9 +12,7 @@ from langchain.embeddings import CacheBackedEmbeddings
 from langchain_community.embeddings.ollama import OllamaEmbeddings
 
 
-def get_vector_store(
-    coll_name: str = "books", persistent_path: str = "/Users/dev/Documents/simple-chatboot/resources/chroma_db"
-) -> Chroma:
+def get_vector_store(coll_name: str = "books", persistent_path: str = "resources/chroma_db") -> Chroma:
     embeddings = OllamaEmbeddings(model="all-minilm")
     store = InMemoryByteStore()
     embeddings_func = CacheBackedEmbeddings.from_bytes_store(
