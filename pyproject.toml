@@ -1,0 +1,40 @@
+[build-system]
+requires = ["setuptools >= 61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+dynamic = ["dependencies"]
+
+name = "simple_chatbot"
+authors = [{name = "sad-zero", email = "zeroro.yun@gmail.com"}]
+version = "1.0.0"
+readme = "README.md"
+license = {file = "LICENSE"}
+
+requires-python = ">=3.10"
+
+[project.optional-dependencies]
+dev = [
+    "pytest"
+]
+
+[tool.pytest.ini_options]
+log_level="DEBUG"
+log_cli=true
+log_cli_level="DEBUG"
+testpaths = ["tests"]
+
+
+[tool.black]
+line-length=120
+target-version=["py310"]
+
+[tool.isort]
+profile = "black"
+
+[tool.setuptools.dynamic]
+dependencies = {file = ["requirements.txt"]}
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["simple_chatbot"]
