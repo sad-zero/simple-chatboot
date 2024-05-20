@@ -2,6 +2,7 @@
 ETL Pipeline
 """
 
+# TODO: ETL Pipeline 완성
 if __name__ == "__main__":
     # extractor = Extractor()
     # transformer = Transformer(embeddings=embeddings)

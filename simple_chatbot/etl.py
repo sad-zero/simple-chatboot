@@ -5,15 +5,21 @@ PDF -> Vector Store ETL Pipeline
 import asyncio
 from dataclasses import asdict
 import json
+import logging
 import os
 import re
 from typing import Dict, List
 
-from chromadb import Collection
+from chromadb import Collection, GetResult
+from langchain.embeddings import CacheBackedEmbeddings
 from langchain_core.embeddings.embeddings import Embeddings
 from langchain_core.documents.base import Document
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langchain.storage import InMemoryByteStore
+from langchain_chroma import Chroma
+from langchain_core.vectorstores import VectorStore
+from chromadb.config import Settings
 
 from simple_chatbot.vo import DocumentPair
 
@@ -76,19 +82,18 @@ class Loader:
     Embedding -> Chroma DB 저장
     """
 
-    __collection: Collection
+    __vector_store: Chroma
 
-    def __init__(self, collection: Collection):
-        self.__collection = collection
+    def __init__(self, vector_store: Chroma):
+        self.__vector_store = vector_store
 
-    def load(self, data: Dict[int, DocumentPair], force: bool = True):
+    def load(self, data: List[Document], force: bool = True):
         """
         @param force: 이전 내용을 지우고 다시 만든다.
         """
         if force:
-            self.__collection.delete(where={"tag": "simple_chatbot"})
-        for idx, document_pair in data.items():
-            self.__collection.add(
-                ids=[str(idx)], embeddings=[document_pair.embedding], documents=[document_pair.document]
-            )
+            collection_name = self.__vector_store._collection.name
+            self.__vector_store.delete_collection()
+            self.__vector_store._collection = self.__vector_store._client.create_collection(collection_name)
+        self.__vector_store.add_documents(documents=data)
         return
