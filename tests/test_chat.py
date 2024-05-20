@@ -1,7 +1,5 @@
-from pprint import pprint
 import pytest
 from langchain_community.embeddings.ollama import OllamaEmbeddings
-from langchain_community.llms.ollama import Ollama
 from langchain_community.chat_models.ollama import ChatOllama
 
 from chromadb import PersistentClient
