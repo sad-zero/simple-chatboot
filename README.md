@@ -2,6 +2,7 @@
 [자취생활백서](https://m.cafe.naver.com/ca-fe/web/cafes/jachinam/articles/15233?useCafeId=false&amp;tc) 챗봇 만들기
 
 ## 설치
+- python 3.10 가상환경 생성(Ex. conda)
 - `pip install -e .`
 - `ollama 설치`
 - `ollama pull all-minilm` : Vector Store Embedding Model

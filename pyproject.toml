@@ -3,14 +3,15 @@ requires = ["setuptools >= 61.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
+dynamic = ["dependencies"]
+
 name = "simple_chatbot"
 authors = [{name = "sad-zero", email = "zeroro.yun@gmail.com"}]
-version = "0.1.0"
+version = "1.0.0"
 readme = "README.md"
 license = {file = "LICENSE"}
 
 requires-python = ">=3.10"
-dependencies = []
 
 [project.optional-dependencies]
 dev = [
