@@ -2,54 +2,18 @@
 Chatbot
 """
 
-from copy import copy
 import logging
 from typing import List
 from chromadb import Collection
 from langchain_core.embeddings.embeddings import Embeddings
 from langchain_core.language_models.llms import BaseLLM
-from langchain_core.messages import BaseMessage, SystemMessage, HumanMessage, AIMessage
+from langchain_core.messages import SystemMessage
 from langchain_core.prompts import ChatPromptTemplate, HumanMessagePromptTemplate, MessagesPlaceholder
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.runnables import Runnable
 from langchain_core.runnables.history import RunnableWithMessageHistory
 from langchain_core.chat_history import BaseChatMessageHistory
 from langchain_community.chat_message_histories.in_memory import ChatMessageHistory
-
-
-class _Memory:
-    __core_db: List[SystemMessage] = []
-    __chat_db: List[BaseMessage] = []
-    __limit: int = 20
-
-    def __init__(self, limit: int = 20):
-        if limit:
-            self.__limit = limit
-
-    def append_core_message(self, message: SystemMessage):
-        self.__core_db.append(message)
-
-    def append_chat_message(self, message: AIMessage | HumanMessage):
-        """
-        Store latest n-messages
-        """
-        if len(self.__chat_db) > self.__limit:
-            self.__chat_db.pop(0)
-        self.__chat_db.append(message)
-
-    def get_core(self) -> List[SystemMessage]:
-        return copy(self.__core_db)
-
-    def get_chat(self) -> List[HumanMessage | AIMessage]:
-        return copy(self.__chat_db)
-
-    def clear_chat(self):
-        self.__chat_db.clear()
-
-    def clear_core(self):
-        self.__core_db.clear()
-
-
 from langchain_core.callbacks import CallbackManagerForRetrieverRun
 from langchain_core.documents import Document
 from langchain_core.retrievers import BaseRetriever
@@ -122,8 +86,6 @@ class Chatbot:
         if session_id not in self.__sessions:
             self.__sessions[session_id] = ChatMessageHistory()
         result: ChatMessageHistory = self.__sessions[session_id]
-        result.add_user_message(HumanMessage(content="안녕하세요"))
-        result.add_ai_message(AIMessage(content="반갑습니다"))
         return result
 
     def query(self, query: str) -> str:

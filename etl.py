@@ -13,7 +13,7 @@ from langchain_community.embeddings.ollama import OllamaEmbeddings
 
 
 def get_vector_store(coll_name: str = "books", persistent_path: str = "resources/chroma_db") -> Chroma:
-    embeddings = OllamaEmbeddings(model="all-minilm")
+    embeddings = OllamaEmbeddings(model="phi3:3.8b-mini-instruct-4k-q4_K_M")
     store = InMemoryByteStore()
     embeddings_func = CacheBackedEmbeddings.from_bytes_store(
         underlying_embeddings=embeddings, document_embedding_cache=store, namespace="in-memory-chat"
